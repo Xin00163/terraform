@@ -1,7 +1,7 @@
-resource "aws_security_group" "allow-ssh" {
+resource "aws_security_group" "selenium_grid__hub_sg" {
   vpc_id = "${aws_vpc.main.id}"
-  name = "allow-ssh"
-  description = "security group that allows ssh and all egress traffic"
+  name = "selenium_grid__hub_sg"
+  description = "security group for selenium grid hub"
   egress {
       from_port = 0
       to_port = 0
@@ -10,12 +10,13 @@ resource "aws_security_group" "allow-ssh" {
   }
 
   ingress {
-      from_port = 22
-      to_port = 22
+      from_port = 0
+      to_port = 4444
       protocol = "tcp"
       cidr_blocks = ["0.0.0.0/0"]
   } 
-tags {
-    Name = "allow-ssh"
+  
+  tags {
+    Name = "selenium_grid__hub_sg"
   }
 }

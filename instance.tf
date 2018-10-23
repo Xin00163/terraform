@@ -6,5 +6,5 @@ resource "aws_instance" "example" {
   subnet_id = "${aws_subnet.main-public-1.id}"
 
   # the security group
-  vpc_security_group_ids = ["${aws_security_group.allow-ssh.id}"]
+  vpc_security_group_ids = ["${aws_security_group.selenium_grid__hub_sg.id}"]
 }
