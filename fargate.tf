@@ -2,16 +2,13 @@ data "aws_availability_zones" "available" {}
 
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
+
+  tags {
+    Name = "Fargate"
+  }
 }
 
-resource "aws_subnet" "private" {
-  count             = 2
-  cidr_block        = "${cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)}"
-  availability_zone = "${data.aws_availability_zones.available.names[count.index]}"
-  vpc_id            = "${aws_vpc.main.id}"
-}
-
-resource "aws_subnet" "public" {
+resource "aws_subnet" "main" {
   count                   = 2
   cidr_block              = "${cidrsubnet(aws_vpc.main.cidr_block, 8, 2 + count.index)}"
   availability_zone       = "${data.aws_availability_zones.available.names[count.index]}"
@@ -19,53 +16,35 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 }
 
-resource "aws_internet_gateway" "gw" {
+resource "aws_internet_gateway" "gateway" {
   vpc_id = "${aws_vpc.main.id}"
 }
 
-resource "aws_route" "internet_access" {
-  route_table_id         = "${aws_vpc.main.main_route_table_id}"
+resource "aws_route_table" "public" {
+  vpc_id = "${aws_vpc.main.id}"
+}
+
+resource "aws_route" "internet-gateway-route" {
+  route_table_id         = "${aws_route_table.public.id}"
+  gateway_id             = "${aws_internet_gateway.gateway.id}"
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = "${aws_internet_gateway.gw.id}"
 }
 
-resource "aws_eip" "gw" {
-  count      = 2
-  vpc        = true
-  depends_on = ["aws_internet_gateway.gw"]
-}
-
-resource "aws_nat_gateway" "gw" {
-  count         = 2
-  subnet_id     = "${element(aws_subnet.public.*.id, count.index)}"
-  allocation_id = "${element(aws_eip.gw.*.id, count.index)}"
-}
-
-resource "aws_route_table" "private" {
-  count  = 2
-  vpc_id = "${aws_vpc.main.id}"
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = "${element(aws_nat_gateway.gw.*.id, count.index)}"
-  }
-}
-
-resource "aws_route_table_association" "private" {
+resource "aws_route_table_association" "public" {
   count          = 2
-  subnet_id      = "${element(aws_subnet.private.*.id, count.index)}"
-  route_table_id = "${element(aws_route_table.private.*.id, count.index)}"
+  subnet_id      = "${element(aws_subnet.main.*.id, count.index)}"
+  route_table_id = "${aws_route_table.public.id}"
 }
 
-resource "aws_security_group" "lb" {
+resource "aws_security_group" "loadbalancer_security_group" {
   name        = "tf-ecs-alb"
   description = "controls access to the ALB"
   vpc_id      = "${aws_vpc.main.id}"
 
   ingress {
-    protocol    = "tcp"
-    from_port   = 80
-    to_port     = 80
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
   }
 
@@ -77,16 +56,17 @@ resource "aws_security_group" "lb" {
   }
 }
 
-resource "aws_security_group" "ecs_tasks" {
-  name        = "tf-ecs-tasks"
+resource "aws_security_group" "ecs_security_group" {
+  name        = "fargate-security-group"
   description = "allow inbound access from the ALB only"
   vpc_id      = "${aws_vpc.main.id}"
 
   ingress {
-    protocol        = "tcp"
-    from_port       = 3000
-    to_port         = 3000
-    security_groups = ["${aws_security_group.lb.id}"]
+    protocol        = "-1"
+    from_port       = 0
+    to_port         = 0
+    cidr_blocks     = ["0.0.0.0/0"]
+    security_groups = ["${aws_security_group.loadbalancer_security_group.id}"]
   }
 
   egress {
@@ -98,33 +78,32 @@ resource "aws_security_group" "ecs_tasks" {
 }
 
 resource "aws_alb" "main" {
-  name            = "tf-ecs-chat"
-  subnets         = ["${aws_subnet.public.*.id}"]
-  security_groups = ["${aws_security_group.lb.id}"]
+  name            = "fargate-application"
+  subnets         = ["${aws_subnet.main.*.id}"]
+  security_groups = ["${aws_security_group.loadbalancer_security_group.id}"]
 }
 
-resource "aws_alb_target_group" "app" {
-  name        = "tf-ecs-chat"
-  port        = 80
+resource "aws_alb_target_group" "app_one" {
+  name        = "hub"
+  port        = 4444
   protocol    = "HTTP"
   vpc_id      = "${aws_vpc.main.id}"
   target_type = "ip"
 }
 
-# Redirect all traffic from the ALB to the target group
-resource "aws_alb_listener" "front_end" {
+resource "aws_alb_listener" "listener" {
   load_balancer_arn = "${aws_alb.main.id}"
-  port              = "80"
+  port              = "4444"
   protocol          = "HTTP"
 
   default_action {
-    target_group_arn = "${aws_alb_target_group.app.id}"
+    target_group_arn = "${aws_alb_target_group.app_one.id}"
     type             = "forward"
   }
 }
 
 resource "aws_ecs_cluster" "main" {
-  name = "tf-ecs-cluster"
+  name = "selenium-cluster"
 }
 
 resource "aws_ecs_task_definition" "app" {
@@ -140,12 +119,12 @@ resource "aws_ecs_task_definition" "app" {
     "cpu": 256,
     "image": "selenium/hub:latest",
     "memory": 512,
-    "name": "app",
+    "name": "selenium",
     "networkMode": "awsvpc",
     "portMappings": [
       {
-        "containerPort": 3000,
-        "hostPort": 3000
+        "containerPort": 4444,
+        "hostPort": 4444
       }
     ],
     "environment": [
@@ -261,24 +240,26 @@ resource "aws_ecs_task_definition" "app" {
 DEFINITION
 }
 
-resource "aws_ecs_service" "main" {
-  name            = "tf-ecs-service"
+resource "aws_ecs_service" "ecs-service" {
+  name            = "selenium-service"
   cluster         = "${aws_ecs_cluster.main.id}"
   task_definition = "${aws_ecs_task_definition.app.arn}"
+  desired_count   = 1
   launch_type     = "FARGATE"
 
   network_configuration {
-    security_groups = ["${aws_security_group.ecs_tasks.id}"]
-    subnets         = ["${aws_subnet.private.*.id}"]
+    security_groups  = ["${aws_security_group.ecs_security_group.id}"]
+    subnets          = ["${aws_subnet.main.*.id}"]
+    assign_public_ip = true
   }
 
   load_balancer {
-    target_group_arn = "${aws_alb_target_group.app.id}"
-    container_name   = "app"
-    container_port   = 3000
+    target_group_arn = "${aws_alb_target_group.app_one.id}"
+    container_name   = "selenium"
+    container_port   = 4444
   }
 
   depends_on = [
-    "aws_alb_listener.front_end",
+    "aws_alb_listener.listener",
   ]
 }

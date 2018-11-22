@@ -1,3 +1,3 @@
-output "alb_hostname" {
+output "alb_dns" {
   value = "${aws_alb.main.dns_name}"
 }
