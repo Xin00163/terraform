@@ -62,11 +62,14 @@ resource "aws_security_group" "ecs_security_group" {
   vpc_id      = "${aws_vpc.main.id}"
 
   ingress {
-    protocol        = "-1"
-    from_port       = 0
-    to_port         = 0
-    cidr_blocks     = ["0.0.0.0/0"]
-    security_groups = ["${aws_security_group.loadbalancer_security_group.id}"]
+    protocol    = "-1"
+    from_port   = 0
+    to_port     = 0
+    cidr_blocks = ["0.0.0.0/0"]
+
+    security_groups = [
+      "${aws_security_group.loadbalancer_security_group.id}",
+    ]
   }
 
   egress {
@@ -106,8 +109,8 @@ resource "aws_ecs_cluster" "main" {
   name = "selenium-cluster"
 }
 
-resource "aws_ecs_task_definition" "app" {
-  family                   = "app"
+resource "aws_ecs_task_definition" "hub" {
+  family                   = "hub"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "1024"
@@ -117,7 +120,7 @@ resource "aws_ecs_task_definition" "app" {
 [
   {
     "cpu": 256,
-    "image": "selenium/hub:latest",
+    "image": "selenium/hub:3.14.0-gallium",
     "memory": 512,
     "name": "selenium",
     "networkMode": "awsvpc",
@@ -148,26 +151,26 @@ resource "aws_ecs_task_definition" "app" {
   },
   {
     "cpu": 256,
-    "image": "selenium/node-firefox:latest",
+    "image": "selenium/node-firefox:3.14.0-gallium",
     "memory": 512,
     "name": "firefox-node",
     "networkMode": "awsvpc",
     "environment": [
       {
           "name": "NODE_MAX_SESSION",
-          "value": "10"
-      },
-      {
-          "name": "NODE_MAX_INSTANCES",
-          "value": "10"
+          "value": "1"
       },
       {
           "name": "HUB_PORT_4444_TCP_ADDR",
-          "value": "selenium"
+          "value": "localhost"
       },
       {
           "name": "HUB_PORT_4444_TCP_PORT",
           "value": "4444"
+      },
+      {
+          "name": "SE_OPTS",
+          "value": "-port 5595"
       }
     ],
     "privileged" : false,
@@ -193,22 +196,18 @@ resource "aws_ecs_task_definition" "app" {
   },
   {
     "cpu": 256,
-    "image": "selenium/node-chrome:latest",
+    "image": "selenium/node-chrome:3.14.0-gallium",
     "memory": 512,
     "name": "chrome-node",
     "networkMode": "awsvpc",
     "environment": [
       {
           "name": "NODE_MAX_SESSION",
-          "value": "10"
-      },
-      {
-          "name": "NODE_MAX_INSTANCES",
-          "value": "10"
+          "value": "1"
       },
       {
           "name": "HUB_PORT_4444_TCP_ADDR",
-          "value": "selenium"
+          "value": "localhost"
       },
       {
           "name": "HUB_PORT_4444_TCP_PORT",
@@ -243,7 +242,7 @@ DEFINITION
 resource "aws_ecs_service" "ecs-service" {
   name            = "selenium-service"
   cluster         = "${aws_ecs_cluster.main.id}"
-  task_definition = "${aws_ecs_task_definition.app.arn}"
+  task_definition = "${aws_ecs_task_definition.hub.arn}"
   desired_count   = 1
   launch_type     = "FARGATE"
 
