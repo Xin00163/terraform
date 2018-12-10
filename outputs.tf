@@ -1,3 +1,4 @@
-output "alb_dns" {
-  value = "${aws_alb.main.dns_name}"
-}
+# output "alb_dns" {
+#   value = "${aws_alb.main.dns_name}"
+# }
+
