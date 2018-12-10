@@ -80,31 +80,6 @@ resource "aws_security_group" "ecs_security_group" {
   }
 }
 
-# resource "aws_alb" "main" {
-#   name            = "fargate-application"
-#   subnets         = ["${aws_subnet.main.*.id}"]
-#   security_groups = ["${aws_security_group.loadbalancer_security_group.id}"]
-# }
-
-# resource "aws_alb_target_group" "app_one" {
-#   name        = "hub"
-#   port        = 4444
-#   protocol    = "HTTP"
-#   vpc_id      = "${aws_vpc.main.id}"
-#   target_type = "ip"
-# }
-
-# resource "aws_alb_listener" "listener" {
-#   load_balancer_arn = "${aws_alb.main.id}"
-#   port              = "4444"
-#   protocol          = "HTTP"
-
-#   default_action {
-#     target_group_arn = "${aws_alb_target_group.app_one.id}"
-#     type             = "forward"
-#   }
-# }
-
 resource "aws_ecs_cluster" "main" {
   name = "selenium-cluster"
 }
@@ -173,26 +148,7 @@ resource "aws_ecs_task_definition" "hub" {
           "value": "-port 5595"
       }
     ],
-    "privileged" : false,
-    "volumes": [
-        {
-            "name": "/dev/shm",
-            "host": {
-                "sourcePath": "/dev/shm"
-            },
-            "dockerVolumeConfiguration": {
-                "scope": "shared",
-                "autoprovision": true,
-                "driver": "",
-                "driverOpts": {
-                    "KeyName": ""
-                },
-                "labels": {
-                    "KeyName": ""
-                }
-            }
-        }
-    ]
+    "privileged" : false
   },
   {
     "cpu": 256,
@@ -214,26 +170,7 @@ resource "aws_ecs_task_definition" "hub" {
           "value": "4444"
       }
     ],
-    "privileged" : false,
-    "volumes": [
-        {
-            "name": "/dev/shm",
-            "host": {
-                "sourcePath": "/dev/shm"
-            },
-            "dockerVolumeConfiguration": {
-                "scope": "shared",
-                "autoprovision": true,
-                "driver": "",
-                "driverOpts": {
-                    "KeyName": ""
-                },
-                "labels": {
-                    "KeyName": ""
-                }
-            }
-        }
-    ]
+    "privileged" : false
   }
 ]
 DEFINITION
@@ -251,14 +188,4 @@ resource "aws_ecs_service" "ecs-service" {
     subnets          = ["${aws_subnet.main.*.id}"]
     assign_public_ip = true
   }
-
-  # load_balancer {
-  #   target_group_arn = "${aws_alb_target_group.app_one.id}"
-  #   container_name   = "selenium"
-  #   container_port   = 4444
-  # }
-
-  # depends_on = [
-  #   "aws_alb_listener.listener",
-  # ]
 }
