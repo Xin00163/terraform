@@ -108,7 +108,7 @@ resource "aws_ecs_task_definition" "hub" {
     "environment": [
       {
           "name": "GRID_MAX_SESSION",
-          "value": "20"
+          "value": "4"
       },
       {
           "name": "TIMEOUT",
@@ -133,7 +133,7 @@ resource "aws_ecs_task_definition" "hub" {
     "environment": [
       {
           "name": "NODE_MAX_SESSION",
-          "value": "1"
+          "value": "2"
       },
       {
           "name": "HUB_PORT_4444_TCP_ADDR",
@@ -159,7 +159,7 @@ resource "aws_ecs_task_definition" "hub" {
     "environment": [
       {
           "name": "NODE_MAX_SESSION",
-          "value": "1"
+          "value": "2"
       },
       {
           "name": "HUB_PORT_4444_TCP_ADDR",

@@ -2,3 +2,5 @@ terraform.tfvars
 terraform.tfstate
 terraform.tfstate.backup
 .terraform
+package-lock.json
+node_modules
