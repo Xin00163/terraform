@@ -58,7 +58,7 @@ resource "aws_security_group" "loadbalancer_security_group" {
 
 resource "aws_security_group" "ecs_security_group" {
   name        = "fargate-security-group"
-  description = "allow inbound access from the ALB only"
+  description = "allow inbound access"
   vpc_id      = "${aws_vpc.main.id}"
 
   ingress {
@@ -66,10 +66,6 @@ resource "aws_security_group" "ecs_security_group" {
     from_port   = 0
     to_port     = 0
     cidr_blocks = ["0.0.0.0/0"]
-
-    security_groups = [
-      "${aws_security_group.loadbalancer_security_group.id}",
-    ]
   }
 
   egress {
