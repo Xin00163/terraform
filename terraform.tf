@@ -1,13 +1,11 @@
+# Fetch AZs in the current region
 data "aws_availability_zones" "available" {}
 
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
-
-  tags {
-    Name = "Fargate"
-  }
 }
 
+# Create 2 public subnets, each in a different AZ
 resource "aws_subnet" "main" {
   count                   = 2
   cidr_block              = "${cidrsubnet(aws_vpc.main.cidr_block, 8, 2 + count.index)}"
@@ -16,46 +14,31 @@ resource "aws_subnet" "main" {
   map_public_ip_on_launch = true
 }
 
+# IGW for the public subnet
 resource "aws_internet_gateway" "gateway" {
   vpc_id = "${aws_vpc.main.id}"
 }
 
+# Create a new route table for the public subnets
 resource "aws_route_table" "public" {
   vpc_id = "${aws_vpc.main.id}"
 }
 
+# Route the public subnet traffic through the IGW
 resource "aws_route" "internet-gateway-route" {
   route_table_id         = "${aws_route_table.public.id}"
   gateway_id             = "${aws_internet_gateway.gateway.id}"
   destination_cidr_block = "0.0.0.0/0"
 }
 
+# Explicitely associate the newly created route tables to the public subnets
 resource "aws_route_table_association" "public" {
   count          = 2
   subnet_id      = "${element(aws_subnet.main.*.id, count.index)}"
   route_table_id = "${aws_route_table.public.id}"
 }
 
-resource "aws_security_group" "loadbalancer_security_group" {
-  name        = "tf-ecs-alb"
-  description = "controls access to the ALB"
-  vpc_id      = "${aws_vpc.main.id}"
-
-  ingress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
+# Security group for the ECS cluster 
 resource "aws_security_group" "ecs_security_group" {
   name        = "fargate-security-group"
   description = "allow inbound access"
@@ -76,6 +59,7 @@ resource "aws_security_group" "ecs_security_group" {
   }
 }
 
+# ECS 
 resource "aws_ecs_cluster" "main" {
   name = "selenium-cluster"
 }
