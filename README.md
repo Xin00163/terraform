@@ -9,7 +9,7 @@ Prerequisite: valid AWS installation and configuration.
 
 * To install terraform with the following commands:
 
-    OSX: brew install terraform
+    OSX: brew install terraform\
     Windows: choco install terraform
 
 * Clone this repo

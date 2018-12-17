@@ -40,9 +40,8 @@ resource "aws_route_table_association" "public" {
 
 # Security group for the ECS cluster 
 resource "aws_security_group" "ecs_security_group" {
-  name        = "fargate-security-group"
-  description = "allow inbound access"
-  vpc_id      = "${aws_vpc.main.id}"
+  name   = "fargate-security-group"
+  vpc_id = "${aws_vpc.main.id}"
 
   ingress {
     protocol    = "-1"
