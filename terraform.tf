@@ -164,7 +164,6 @@ resource "aws_ecs_service" "ecs-service" {
 
   network_configuration {
     security_groups  = flatten([
-    security_groups  = flatten({
       aws_security_group.ecs_security_group.id,
     ])
     subnets          = flatten([
