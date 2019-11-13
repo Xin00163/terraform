@@ -74,7 +74,7 @@ resource "aws_ecs_task_definition" "hub" {
 [
   {
     "cpu": 256,
-    "image": "selenium/hub:3.14.0-gallium",
+    "image": "selenium/hub:3.5.3-boron",
     "memory": 512,
     "name": "selenium",
     "networkMode": "awsvpc",
@@ -105,7 +105,7 @@ resource "aws_ecs_task_definition" "hub" {
   },
   {
     "cpu": 256,
-    "image": "selenium/node-firefox:3.14.0-gallium",
+    "image": "selenium/node-firefox:3.5.3-boron",
     "memory": 512,
     "name": "firefox-node",
     "networkMode": "awsvpc",
@@ -131,7 +131,7 @@ resource "aws_ecs_task_definition" "hub" {
   },
   {
     "cpu": 256,
-    "image": "selenium/node-chrome:3.14.0-gallium",
+    "image": "selenium/node-chrome:3.5.3-boron",
     "memory": 512,
     "name": "chrome-node",
     "networkMode": "awsvpc",
